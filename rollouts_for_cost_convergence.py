@@ -28,7 +28,7 @@ B = 0.4
 Q = 3
 R = 4
 
-K = 0.9
+K = 2.0
 
 #note the value of m is really 2*m beacuse of my structure
 r = 0.005
@@ -47,8 +47,8 @@ def compute_gradient(A, B, Q, R, K):
 	initial state."""
 	numerator = 2*(A*A*(-1*R)*K + A*B*(R*K*K - Q) + K*(B*B*Q + R))
 	denominator = (-1*A*A + 2*A*B*K - B*B*K*K + 1)**2
-	return numerator / denominator
-	
+	return numerator / denominator	
+
 #this is actual cost with expectation over initial state with variance = 1
 def compute_actual_cost(A, B, Q, R, K):
 	"""Returns the actual cost of using the policy K."""
@@ -90,6 +90,36 @@ def find_minimizer(A, B, Q, R):
 
 K_star = float(find_minimizer(np.array(A), np.array(B), np.array(Q), np.array(R))[2])
 print("K_star: " + str(K_star))
+#print("R good? " + str((compute_actual_cost(A, B, Q, R, K_star + r) - compute_actual_cost(A, B, Q, R, K_star - r))/(2*r)))
+
+
+"""""""""""""""""""""""
+"""""""""""""""""""""""
+"""Functions to compute logarithmically scaled epsilon and m lists."""
+"""""""""""""""""""""""
+"""""""""""""""""""""""
+
+def compute_m_test_list(lower, upper, density):
+	"""Returns a logarithmically scaled list with density # of values
+	given upper and lower bounds, for the values of m to test."""
+	difference = (np.log(upper) - np.log(lower)) / density
+	print(difference)
+	l = []
+	for i in np.arange(np.log(lower), np.log(upper), difference):
+		l.append(int(round(np.exp(i))))
+	return l
+
+def compute_epsilon_list(lower, upper, density):
+	"""Returns a logarithmically scaled list with density # of values
+	given upper and lower bounds, for the values of epsilon for which
+	to determine the minimum m."""
+	difference = -1*(np.log(lower) - np.log(upper)) / density
+	print(difference)
+	l = []
+	for i in np.arange(np.log(lower), np.log(upper), difference):
+		l.append(np.exp(i))
+	return l
+
 
 """""""""""""""""""""""
 """""""""""""""""""""""
@@ -109,27 +139,45 @@ def gradient_descent(initial_K, step_size, epsilon, max_iter, optimum, m):
 	is when we hit a region of non-stability."""
 	i = 0
 	current_K = initial_K
+	iterates = [current_K]
 		
 	while i < max_iter and abs(compute_actual_cost(A, B, Q, R, current_K) - compute_actual_cost(A, B, Q, R, optimum)) > epsilon:
 		
+		print("Iteration: " + str(i))
+		print("Current K: " + str(current_K))
+
 		estimated_gradient = compute_estimated_gradient(A, B, Q, R, current_K, m)
-		
+		#estimated_gradient = compute_gradient(A, B, Q, R, current_K)
+		print("Estimated Gradient: " + str(estimated_gradient))
+		print("Actual Gradient: " + str(compute_gradient(A, B, Q, R, current_K)))
+		print("Actual Cost: " + str(compute_actual_cost(A, B, Q, R, current_K)))
+		print("_____________________")
+
 		if (estimated_gradient < 0 and compute_gradient(A, B, Q, R, current_K) > 0) or (estimated_gradient > 0 and compute_gradient(A, B, Q, R, current_K) < 0):
-			print("Stopping Condition, we have opposite gradient.")
+			#print("Stopping Condition, we have opposite gradient.")
 			i = max_iter + 1690
 		
 		current_K = gradient_step(current_K, step_size, estimated_gradient)
+		iterates.append(current_K)
 		
 		if not is_stable(A, B, current_K):
-			print("At iteration " + str(i) + " we are no longer stable.")
+			#print("At iteration " + str(i) + " we are no longer stable.")
 			i = max_iter + 1587
 		
 		i = i + 1
 
-	print("Final K: " + str(current_K))
-	print("Final K Cost: " + str(compute_actual_cost(A, B, Q, R, current_K)))
-	print("K_star Cost: " + str(compute_actual_cost(A, B, Q, R, K_star)))
+	# print("Final K: " + str(current_K))
+	# print("Final K Cost: " + str(compute_actual_cost(A, B, Q, R, current_K)))
+	# print("K_star Cost: " + str(compute_actual_cost(A, B, Q, R, K_star)))
+	
+	# print("Iterates: " + str(np.array(iterates)))
+	# plt.plot(range(0, len(iterates)), iterates)
+	# plt.xlabel("Iteration")
+	# plt.ylabel("Current K")
+	# plt.show()
+	
 	return current_K
+	#return iterates
 
 """""""""""""""""""""""
 """""""""""""""""""""""
@@ -194,14 +242,42 @@ So, we want our test to succeed proportion=delta times.
 """""""""""""""""""""""
 """""""""""""""""""""""
 
+#lol i computed the biggest r value for epsilon = 0.001, this is below.
+#it is SIGNIFICANTLY smaller than the r value of 0.005 i was using below.
+r = 0.0007715
 delta = 0.9
 num_simulations = 1
-epsilon_list = [0.0001]
-m_test_list = [1]
-step_size = 0.005
-max_iter = 10000
+epsilon_list = compute_epsilon_list(10**(-5), 10**(-12), 20)
+epsilon_list = [0.001]
+#m_test_list = compute_m_test_list(1, 1000, 20)
+m_test_list = [200]
+step_size = 0.11
+max_iter = 1000000
 print("Step Size: " + str(step_size))
 print("Max Iterations: " + str(max_iter))
 
 print(iterate_over_epsilon(epsilon_list, m_test_list))
+
+def grid_search(start, end, difference):
+	for step_size in np.arange(start, end, difference):
+		print("Step Size: " + str(step_size))
+		iterates = gradient_descent(K, step_size, 0.0001, max_iter, K_star, 100)
+		plt.plot(range(0, len(iterates)), iterates)
+		plt.show()
+
+#grid_search(0.1, 0.12, 0.01)
+
+#try different matrices, in particular huge/tiny values for Q and R
+#and different A and B
+
+#ALSO IMPORTANT: plot out the cost landscape for different values of
+#A and B and Q and R, Ashwin will ask about what changing these does
+#for us. also find the optimal K_star expression lol - he will ask about
+#that as well. i think this will also help with my issue, currently the
+#landscape is very steep so a step size small enough to overcome the initial
+#fat gradient will overcome all future ones, hence no bouncing. but if we make
+#the landscape shallower, then this is not true
+
+#looks like 0.11 is as big as it gets for initial 0.9 (and initial 0.2). If I push the starting point further away
+#then I hop across once but otherwise descent is smooth
 

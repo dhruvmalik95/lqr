@@ -52,7 +52,7 @@ def compute_gradient(A, B, Q, R, K):
 #this is actual cost with expectation over initial state with variance = 1
 def compute_actual_cost(A, B, Q, R, K):
 	"""Returns the actual cost of using the policy K."""
-	numerator = (Q + K*R*K)*1
+	numerator = (Q + K*R*K)*1 #instead of *1 it is *E(x^2)
 	denominator = 1 - ((A-B*K)**2)
 	return numerator/denominator
 
@@ -191,5 +191,52 @@ print("M List To Test: " + str(m_test_list))
 delta = 0.9
 num_simulations = 100
 
-print(iterate_over_epsilon(epsilon_list, m_test_list))
+#print(iterate_over_epsilon(epsilon_list, m_test_list))
+
+"""""""""""""""""""""""
+"""""""""""""""""""""""
+"""Functions to compute dependence between epsilon and r."""
+"""""""""""""""""""""""
+"""""""""""""""""""""""
+
+def check_r(r, epsilon, A, B, Q, R, K, true_gradient):
+	estimate = (compute_actual_cost(A, B, Q, R, K + r) - compute_actual_cost(A, B, Q, R, K - r))/(2*r)
+	return abs(estimate - true_gradient) < epsilon
+
+def grid_search(start, diff, epsilon, A, B, Q, R, K):
+	i = 0
+	true_gradient = compute_gradient(A, B, Q, R, K)
+	while i < 100000000:
+		#print(i)
+		current_r = start + i*diff
+		if not check_r(current_r, epsilon, A, B, Q, R, K, true_gradient):
+			print("success")
+			return current_r - diff
+		i = i + 1
+
+def iterate_over_epsilon_2(epsilon_list, A, B, Q, R, K):
+	r_list = []
+	for epsilon in epsilon_list:
+		print(epsilon)
+		max_r = grid_search(start, diff, epsilon, A, B, Q, R, K)
+		r_list.append(max_r)
+	return r_list
+
+start = 0.00001
+diff = 0.000000001
+
+print("Testing r vs. epsilon")
+epsilon_list = compute_epsilon_list(0.00001, 0.1, 50)
+epsilon_list = [0.001]
+print("Epsilon List: " + str(epsilon_list))
+print("Max r List: " + str(iterate_over_epsilon_2(epsilon_list, A, B, Q, R, 4.0)))
+
+def shit(A, B, Q, R):
+	a = A*B*R
+	b = B*B*Q + R - A*A*R
+	c = -1*B*Q*A
+	return np.roots([a,b,c])
+
+#print(shit(A, B, Q, R))
+
 
