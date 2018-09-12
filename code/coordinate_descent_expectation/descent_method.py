@@ -114,13 +114,15 @@ def gradient_descent(d, r, m, epsilon, step_size, initial_K, optimal_K):
 	stop = 100000
 	while N < stop and not converged(K_star, current_K, epsilon):
 		#print("Current K: " + str(current_K))
-		print("Current K Cost: " + str(compute_controller_gaussian_cost(A, B, Q, R, current_K, cost_tol, cost_max_iter, d)))
-		print(N)
-		print("K_star Cost: " + str(K_star_cost))
+		if N % 1000 == 0:	
+			current_cost = compute_controller_gaussian_cost(A, B, Q, R, current_K, cost_tol, cost_max_iter, d)
+			print("Current K Cost: " + str(current_cost))
+			print(N)
+			print("K_star Cost: " + str(K_star_cost))
 		gradient_estimate = estimate_partial_derivative(d, r, m, current_K)
 		#print("Gradient Estimate: " + str(gradient_estimate))
 		#print("Norm Of Gradient Estimate: " + str(np.linalg.norm(gradient_estimate, ord='fro')))
-		current_K = gradient_step(current_K, step_size/(500000), gradient_estimate)
+		current_K = gradient_step(current_K, step_size, gradient_estimate)
 		if is_stable(A, B, current_K) == False:
 			print("Stopped Early - Unstable: " + str(N))
 			N = stop + 1
@@ -206,7 +208,9 @@ def generate_initial_K(d, A, B, K_star):
 	K = np.copy(K_star) + perturbation
 	"""Introduce Operator Norm Condition <0.5 here - maybe divide by d to help generation??"""
 	while not is_stable(A, B, K):
-		perturbation = 0.75*(np.random.random(size=(d,d)) - 0.5)/(10/0.21)
+		perturbation = 0.75*(np.random.random(size=(d,d)) - 0.5)/(10/4)
+		#perturbation = 0.75*(np.random.random(size=(d,d)) - 0.5)/(10/0.58) for d=32
+		#perturbation = 0.75*(np.random.random(size=(d,d)) - 0.5)/(10/0.22) for d=64
 		K = np.copy(K_star) + perturbation
 	return K
 
@@ -218,85 +222,93 @@ def compute_d_test_list(lower, upper, density):
 		l.append(int(round(np.exp(i))))
 	return l
 
-#d_test_list = compute_d_test_list(2, 100, 10)
-d_test_list = range(64,65)
+# #d_test_list = compute_d_test_list(2, 100, 10)
+# d_test_list = range(4,5)
 
-epsilon_list = []
-epsilon_worst_list = []
+# epsilon_list = []
+# epsilon_worst_list = []
 
-d_number = 1
-initialize_number = 1
-"""
-for d in d_test_list:
-	epsilon_avg = 0
-	e_worst_list = []
-	for __ in range(0, d_number):
-		print("Iteration: " + str(__))
-		A, B = generate_transitions(d)
-		A = 0.3*A #maybe divide these numbers by log(d)?
-		B = 0.3*B
-		Q, R, Q_d, R_d = generate_rewards(d)
-		Q = 1*Q
-		R = 1*R
-		state_list = generate_initial_states(d)
-		cost_tol = 0.0001
-		cost_max_iter = 100000
+# d_number = 10
+# initialize_number = 1
 
-		r = 1e-12
-		"""  """
-		m = 0 #doesn't matter here
-		epsilon = 0.5
-		step_size = 1.0 # remember im dividing this by initial cost, and it may be too big even for perfect gradients
+# for d in d_test_list:
+# 	epsilon_avg = 0
+# 	e_worst_list = []
+# 	for __ in range(0, d_number):
+# 		print("Iteration: " + str(__))
+# 		A, B = generate_transitions(d)
+# 		A = 0.3*A #maybe divide these numbers by log(d)?
+# 		B = 0.3*B
+# 		Q, R, Q_d, R_d = generate_rewards(d)
+# 		Q = 1*Q
+# 		R = 1*R
+# 		state_list = generate_initial_states(d)
+# 		cost_tol = 0.0001
+# 		cost_max_iter = 100000
 
-		print("d: " + str(d))
-		print("A: " + str(A))
-		print("B: " + str(B))
-		print("Q: " + str(Q))
-		print("R: " + str(R))
-		print("Initial State List: " + str(state_list))
+# 		r = 1e-12
+# 		"""  """
+# 		m = 0 #doesn't matter here
+# 		epsilon = 0.75
+# 		#step_size = 1.0 # remember im dividing this by initial cost, and it may be too big even for perfect gradients
 
-		print("Q is PSD: " + str(is_pos_def(Q)))
-		print("R is PSD: " + str(is_pos_def(R)))
+# 		print("d: " + str(d))
+# 		print("A: " + str(A))
+# 		print("B: " + str(B))
+# 		print("Q: " + str(Q))
+# 		print("R: " + str(R))
+# 		print("Initial State List: " + str(state_list))
 
-		K_star = np.array(compute_optimal_controller(A, B, Q, R))
-		print("K_star: " + str(K_star))
-		K_star_cost = compute_controller_gaussian_cost(A, B, Q, R, K_star, cost_tol, cost_max_iter, d)
-		print("K_star Cost: " + str(K_star_cost))
+# 		print("Q is PSD: " + str(is_pos_def(Q)))
+# 		print("R is PSD: " + str(is_pos_def(R)))
+
+# 		K_star = np.array(compute_optimal_controller(A, B, Q, R))
+# 		print("K_star: " + str(K_star))
+# 		K_star_cost = compute_controller_gaussian_cost(A, B, Q, R, K_star, cost_tol, cost_max_iter, d)
+# 		print("K_star Cost: " + str(K_star_cost))
 		
-		epsilon_avg_initialize = 0
-		for _ in range(0, initialize_number):
-			initial_K = generate_initial_K(d, A, B, K_star)
-			# initial_K = np.array([[1.6, 1.138],[1.5, 5.3]])
+# 		epsilon_avg_initialize = 0
+# 		for _ in range(0, initialize_number):
+# 			initial_K = generate_initial_K(d, A, B, K_star)
+# 			# initial_K = np.array([[1.6, 1.138],[1.5, 5.3]])
 
 
-			print("Initial K: " + str(initial_K))
-			print("Initial K Is Stable: " + str(is_stable(A, B, initial_K)))
-			initial_K_cost = compute_controller_gaussian_cost(A, B, Q, R, initial_K, cost_tol, cost_max_iter, d)
-			print("Initial K Cost: " + str(initial_K_cost))
-			# print(find_direction(3, 2, 0.001, initial_K))
-			# print(descend_hill(3, 2, 0.001, initial_K))
+# 			print("Initial K: " + str(initial_K))
+# 			print("Initial K Is Stable: " + str(is_stable(A, B, initial_K)))
+# 			initial_K_cost = compute_controller_gaussian_cost(A, B, Q, R, initial_K, cost_tol, cost_max_iter, d)
+# 			print("Initial K Cost: " + str(initial_K_cost))
+# 			step_size = 0.1/(initial_K_cost*initial_K_cost)
+# 			# print(find_direction(3, 2, 0.001, initial_K))
+# 			# print(descend_hill(3, 2, 0.001, initial_K))
 			
-			#step_size = epsilon/(d*d)
+# 			#step_size = epsilon/(d*d)
 
-			estimate = gradient_descent(d, r, m, epsilon, step_size, initial_K, K_star)
-			epsilon_avg_initialize = estimate
-		e_worst_list.append(estimate)
-		epsilon_avg_initialize = epsilon_avg_initialize/initialize_number
-		epsilon_avg = epsilon_avg + epsilon_avg_initialize
+# 			estimate = gradient_descent(d, r, m, epsilon, step_size, initial_K, K_star)
+# 			epsilon_avg_initialize = estimate
+# 		e_worst_list.append(estimate)
+# 		epsilon_avg_initialize = epsilon_avg_initialize/initialize_number
+# 		epsilon_avg = epsilon_avg + epsilon_avg_initialize
 	
-	epsilon_avg = epsilon_avg/d_number
-	epsilon_list.append(epsilon_avg)
-	epsilon_worst_list.append(min(e_worst_list))
-	print("____________________________")
+# 	epsilon_avg = epsilon_avg/d_number
+# 	epsilon_list.append(epsilon_avg)
+# 	epsilon_worst_list.append(min(e_worst_list))
+# 	print("____________________________")
 
 
-print("Epsilon List: " + str(epsilon_list))
-print("Epsilon Worst List: " + str(epsilon_worst_list))
-plt.plot(np.log(d_test_list), np.log(epsilon_list/step_size))
-plt.show()
-"""
+# print("Epsilon List: " + str(epsilon_list))
+# print(sum(epsilon_list)/len(epsilon_list))
+
+
+#with 10 iterations, 16 = 123.4
+#32 = 32000,100000,100000,85363,
+#64 = 42471,510000,
+
+#print("Epsilon Worst List: " + str(epsilon_worst_list))
+# plt.plot(np.log(d_test_list), np.log(epsilon_list/step_size))
+# plt.show()
+
 x = np.log([2,4,8,16,32,64])
-y = np.log([500,1000,5000,15000,35000,300000])
+y = np.log([500,1500,5000,12000,75000,400000])
 print(sc.stats.linregress(x, y))
 plt.scatter(x, y)
 plt.xlabel('log(dimension)')
